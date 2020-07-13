@@ -2,6 +2,7 @@ import socket, time, random, select
 from threading import Thread
 
 quit_is_called = False
+rcvd = False
 buffer = []
 
 print("Select the mode from the following Choices:\n1)Receiver\n2)Sender")
@@ -81,6 +82,24 @@ def listen():
     do_the_thread((addr[0], prt), s)
 
 
+def brdcst(bs, msg, broadcastIP, port):
+    while not rcvd:
+        bs.sendto(bytes(msg, "UTF-8"), (broadcastIP, port))
+        time.sleep(3)
+        # print("Boadcast!")
+
+
+def recv_or_brdcast(bs, msg, broadcastIP, port):
+    global rcvd
+    th = Thread(target=brdcst, args=(bs, msg, broadcastIP, port))
+    th.setDaemon(True)
+    th.start()
+    print("Zendam")
+    a, b = bs.recvfrom(1024)
+    rcvd = True
+    # t1 = Thread(target=rcv_msg, args=("Thread-1", 2, sk))
+    return a, b
+
 def broadcast():
     myIP = socket.gethostbyname(socket.gethostname())
     broadcastIP = socket.inet_ntoa(socket.inet_aton(myIP)[:3] + b'\xff' )
@@ -88,7 +107,8 @@ def broadcast():
     msg = "Hello"
     bs = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     bs.sendto(bytes(msg, "UTF-8"), (broadcastIP, port))
-    data, addr = bs.recvfrom(1024)
+    data, addr = recv_or_brdcast(bs, msg, broadcastIP, port)
+    # data, addr = bs.recvfrom(1024)
     print(str(int(data)), addr)
     bs.close()
 
