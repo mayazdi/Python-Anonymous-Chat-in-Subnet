@@ -18,15 +18,7 @@ def listen():
     ls.close()
     rc.sendto(bytes("Hi", "UTF-8"), addr)
     print("Sent")
-    t0 = Thread(target=run)
-    t1 = Thread(target=rcv_msg, args=("Thread-1", 2, rc))
-    t2 = Thread(target=snd_msg, args=("Thread-2", addr, rc))
-    t1.setDaemon(True)
-    t2.setDaemon(True)
-    t0.start()
-    t1.start()
-    t2.start()
-    t0.join()
+    do_the_thread(addr, rc)
 
 
 
@@ -60,6 +52,18 @@ def run():
             break
 
 
+def do_the_thread(addr, sk):
+    t0 = Thread(target=run)
+    t1 = Thread(target=rcv_msg, args=("Thread-1", 2, sk))
+    t2 = Thread(target=snd_msg, args=("Thread-2", addr, sk))
+    t1.setDaemon(True)
+    t2.setDaemon(True)
+    t0.start()
+    t1.start()
+    t2.start()
+    t0.join()
+
+
 def broadcast():
     myIP = socket.gethostbyname(socket.gethostname())
     broadcastIP = socket.inet_ntoa( socket.inet_aton(myIP)[:3] + b'\xff' )
@@ -70,26 +74,7 @@ def broadcast():
     data, addr = bs.recvfrom(1024)
     print(data, addr)
     #Ta yek daghighe check konim ke jadid oomad block konim
-
-    t0 = Thread(target=run)
-    t1 = Thread(target=rcv_msg, args=("Thread-1", 2, bs))
-    t2 = Thread(target=snd_msg, args=("Thread-2", addr, bs))
-    t1.setDaemon(True)
-    t2.setDaemon(True)
-    t0.start()
-    t1.start()
-    t2.start()
-    t0.join()
-    # t1.daemon = True
-    # t2.daemon = True
-    # while 1:
-    #     if quit_is_called:
-    #         break
-    # while True:
-    #     inp = input()
-    #     bs.sendto(bytes(inp, "UTF-8"), addr)
-    #     if inp == "quit":
-    #         break
+    do_the_thread(addr, bs)
 
 
 
