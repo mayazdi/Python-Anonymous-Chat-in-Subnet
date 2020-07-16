@@ -1,6 +1,5 @@
-import socket, time, random, multiprocessing, select
+import socket, time, random, multiprocessing, ipaddress
 from threading import Thread
-
 
 quit_is_called = False
 rcvd = False
@@ -8,7 +7,7 @@ buffer = []
 
 
 def run():
-    while True: 
+    while True:
         global quit_is_called
         if quit_is_called:
             break
@@ -28,7 +27,7 @@ def do_the_thread(addr, sk):
 
 def write_buffer():
     while len(buffer) > 0:
-        print (buffer[0])
+        print(buffer[0])
         buffer.pop(0)
 
 
@@ -37,12 +36,12 @@ def rcv_msg(name, delay, sk):
     while True:
         d = sk.recv(1024).decode("UTF-8")
         buffer.append(">>" + d)
-        print('\a', end="") #Alarm
+        print('\a', end="")  # Alarm
         time.sleep(delay)
-        if d=="quit":
+        if d == "quit":
             quit_is_called = True
             break
-        
+
 
 def snd_msg(name, addr, sk):
     global quit_is_called
@@ -61,10 +60,12 @@ def snd_msg(name, addr, sk):
         else:
             print("<<Message lenght is not valid.>>")
 
+
 def recv_bad_port(s, ls):
     data, _ = ls.recvfrom(1024)
-    if data=="Bad Port":
+    if data == "Bad Port":
         raise Exception("Bad Port")
+
 
 def listen():
     IP = socket.gethostbyname(socket.gethostname())
@@ -81,16 +82,17 @@ def listen():
             # prt = 2304
             ls.sendto(bytes(str(prt), "UTF-8"), addr)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            t4 = Thread(target=recv_bad_port, args=("Thread-4", ls), daemon=True)
+            t4 = Thread(target=recv_bad_port, args=(
+                "Thread-4", ls), daemon=True)
             t4.start()
             s.connect((addr[0], prt))
             print(s.recv(4096).decode("utf-8"))
         except:
             print("Couldnt establish connection")
         finally:
-            ls.close()
+            # ls.close()
             break
-    #if ok lets chat
+    # if ok lets chat
     # ls.close()
     # rc.sendto(bytes("Hi", "UTF-8"), addr)
     # print("Sent")
@@ -116,14 +118,13 @@ def recv_or_brdcast(bs, msg, broadcastIP, port):
 
 
 def recv_and_block(s, bs):
-    while True:    
+    while True:
         _, a = bs.recvfrom(1024)
         bs.sendto(bytes("Destination already taken", "UTF-8"), a)
 
 
-def broadcast():
-    myIP = socket.gethostbyname(socket.gethostname())
-    broadcastIP = socket.inet_ntoa(socket.inet_aton(myIP)[:3] + b'\xff' )
+def broadcast(BIP):
+    broadcastIP = BIP
     port = 8080
     msg = "Hello"
     bs = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -147,18 +148,29 @@ def broadcast():
     do_the_thread(addr, conn)
 
 
+myIP = socket.gethostbyname(socket.gethostname())
+print("Your Subnet mask is set to /24 by default. if you want to change enter the mask value:\nelse press Enter.")
+mask = input()
+BIP = None
+try:
+    BIP = str(ipaddress.ip_network('192.168.1.0/'+mask).broadcast_address)
+except Exception as e:
+    print(e)
+    print("mask is not changed!")
+    BIP = socket.inet_ntoa(socket.inet_aton(myIP)[:3] + b'\xff')
+print("-------------------------------------------")
 print("Select the mode from the following Choices:\n1)Receiver\n2)Sender")
 mode = input()
-if mode=="1": #LSTN
+if mode == "1":  # LSTN
     print("Receiving Selected!")
     listen()
     """ try:
         listen()
     except:
         print("Sending Faced problem!") """
-elif mode=="2": #BRDC
+elif mode == "2":  # BRDC
     print("Sending Selected!")
-    broadcast()
+    broadcast(BIP)
     """ try:
         broadcast()
     except:
