@@ -61,6 +61,10 @@ def snd_msg(name, addr, sk):
         else:
             print("<<Message lenght is not valid.>>")
 
+def recv_bad_port(s, ls):
+    data, _ = ls.recvfrom(1024)
+    if data=="Bad Port":
+        raise Exception("Bad Port")
 
 def listen():
     IP = socket.gethostbyname(socket.gethostname())
@@ -71,13 +75,21 @@ def listen():
     # while True:
     data, addr = ls.recvfrom(1024)
     print(data.decode("UTF-8"), addr)
-    prt = random.randrange(start=1025, stop=65535)
-    prt = 2304
-    ls.sendto(bytes(str(prt), "UTF-8"), addr)
-    ls.close()
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((addr[0], prt))
-    print(s.recv(4096).decode("utf-8"))
+    while True:
+        try:
+            prt = random.randrange(start=1025, stop=65535)
+            # prt = 2304
+            ls.sendto(bytes(str(prt), "UTF-8"), addr)
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            t4 = Thread(target=recv_bad_port, args=("Thread-4", ls), daemon=True)
+            t4.start()
+            s.connect((addr[0], prt))
+            print(s.recv(4096).decode("utf-8"))
+        except:
+            print("Couldnt establish connection")
+        finally:
+            ls.close()
+            break
     #if ok lets chat
     # ls.close()
     # rc.sendto(bytes("Hi", "UTF-8"), addr)
@@ -119,12 +131,17 @@ def broadcast():
     data, addr = recv_or_brdcast(bs, msg, broadcastIP, port)
     print(str(int(data)), addr)
     # bs.close()
-
-    cs = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    cs.bind(('0.0.0.0', int(data)))
-    cs.listen(5)
-    conn, addr = cs.accept()
-    conn.send(bytes("Lets Chat on port" + str(data), "utf-8"))
+    while True:
+        try:
+            cs = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            cs.bind(('0.0.0.0', int(data)))
+            cs.listen(5)
+            conn, addr = cs.accept()
+            conn.send(bytes("Lets Chat on port" + str(data), "utf-8"))
+        except:
+            bs.sendto(bytes("Bad Port", "UTF-8"), addr)
+        finally:
+            break
     t3 = Thread(target=recv_and_block, args=("Thread-3", bs), daemon=True)
     t3.start()
     do_the_thread(addr, conn)
@@ -135,8 +152,16 @@ mode = input()
 if mode=="1": #LSTN
     print("Receiving Selected!")
     listen()
+    """ try:
+        listen()
+    except:
+        print("Sending Faced problem!") """
 elif mode=="2": #BRDC
     print("Sending Selected!")
     broadcast()
+    """ try:
+        broadcast()
+    except:
+        print("Sending Faced problem!") """
 else:
     print("The Input is not valid.")
