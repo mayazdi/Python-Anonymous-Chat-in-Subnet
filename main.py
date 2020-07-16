@@ -1,6 +1,7 @@
 import socket, time, random, multiprocessing, select
 from threading import Thread
 
+
 quit_is_called = False
 rcvd = False
 buffer = []
@@ -51,10 +52,14 @@ def snd_msg(name, addr, sk):
         inp = input()
         if inp == '\n':
             continue
-        sk.send(bytes(inp, "UTF-8"))
-        if inp == "quit":
-            quit_is_called = True
-            break
+        ln = len(inp)
+        if ln < 1024:
+            sk.send(bytes(inp, "UTF-8"))
+            if inp == "quit":
+                quit_is_called = True
+                break
+        else:
+            print("<<Message lenght is not valid.>>")
 
 
 def listen():
