@@ -1,12 +1,9 @@
-import socket, time, random, select
+import socket, time, random, multiprocessing, select
 from threading import Thread
 
 quit_is_called = False
 rcvd = False
 buffer = []
-
-print("Select the mode from the following Choices:\n1)Receiver\n2)Sender")
-mode = input()
 
 
 def run():
@@ -39,6 +36,7 @@ def rcv_msg(name, delay, sk):
     while True:
         d = sk.recv(1024).decode("UTF-8")
         buffer.append(">>" + d)
+        print('\a', end="") #Alarm
         time.sleep(delay)
         if d=="quit":
             quit_is_called = True
@@ -94,11 +92,17 @@ def recv_or_brdcast(bs, msg, broadcastIP, port):
     th = Thread(target=brdcst, args=(bs, msg, broadcastIP, port))
     th.setDaemon(True)
     th.start()
-    print("Zendam")
     a, b = bs.recvfrom(1024)
     rcvd = True
     # t1 = Thread(target=rcv_msg, args=("Thread-1", 2, sk))
     return a, b
+
+
+def recv_and_block(s, bs):
+    while True:    
+        _, a = bs.recvfrom(1024)
+        bs.sendto(bytes("Destination already taken", "UTF-8"), a)
+
 
 def broadcast():
     myIP = socket.gethostbyname(socket.gethostname())
@@ -108,20 +112,21 @@ def broadcast():
     bs = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     bs.sendto(bytes(msg, "UTF-8"), (broadcastIP, port))
     data, addr = recv_or_brdcast(bs, msg, broadcastIP, port)
-    # data, addr = bs.recvfrom(1024)
     print(str(int(data)), addr)
-    bs.close()
+    # bs.close()
 
     cs = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     cs.bind(('0.0.0.0', int(data)))
     cs.listen(5)
     conn, addr = cs.accept()
     conn.send(bytes("Lets Chat on port" + str(data), "utf-8"))
-    # Ta yek daghighe check konim ke jadid oomad block konim
+    t3 = Thread(target=recv_and_block, args=("Thread-3", bs), daemon=True)
+    t3.start()
     do_the_thread(addr, conn)
 
 
-
+print("Select the mode from the following Choices:\n1)Receiver\n2)Sender")
+mode = input()
 if mode=="1": #LSTN
     print("Receiving Selected!")
     listen()
